@@ -1,7 +1,7 @@
 const db = require('../config/db');
 
 class TaskModel {
-  static async findByProjectId(projectId, filters = {}) {
+  static async findByProjectId(projectId, filters = {}, limit = 50, offset = 0) {
     let text = 'SELECT * FROM tasks WHERE project_id = $1';
     const params = [projectId];
     
@@ -16,8 +16,33 @@ class TaskModel {
     }
     
     text += ' ORDER BY created_at DESC';
+    
+    params.push(limit);
+    text += ` LIMIT $${params.length}`;
+    
+    params.push(offset);
+    text += ` OFFSET $${params.length}`;
+
     const { rows } = await db.query(text, params);
     return rows;
+  }
+
+  static async countByProjectId(projectId, filters = {}) {
+    let text = 'SELECT COUNT(*) FROM tasks WHERE project_id = $1';
+    const params = [projectId];
+    
+    if (filters.status) {
+      params.push(filters.status);
+      text += ` AND status = $${params.length}`;
+    }
+    
+    if (filters.assignee) {
+      params.push(filters.assignee);
+      text += ` AND assignee_id = $${params.length}`;
+    }
+    
+    const { rows } = await db.query(text, params);
+    return parseInt(rows[0].count);
   }
 
   static async findById(taskId) {

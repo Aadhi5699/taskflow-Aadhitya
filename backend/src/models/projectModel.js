@@ -1,16 +1,28 @@
 const db = require('../config/db');
 
 class ProjectModel {
-  static async findAllForUser(userId) {
+  static async findAllForUser(userId, limit = 10, offset = 0) {
     const text = `
       SELECT DISTINCT p.* 
       FROM projects p
       LEFT JOIN tasks t ON p.id = t.project_id
       WHERE p.owner_id = $1 OR t.assignee_id = $1
       ORDER BY p.created_at DESC
+      LIMIT $2 OFFSET $3
+    `;
+    const { rows } = await db.query(text, [userId, limit, offset]);
+    return rows;
+  }
+
+  static async countAllForUser(userId) {
+    const text = `
+      SELECT COUNT(DISTINCT p.id) 
+      FROM projects p
+      LEFT JOIN tasks t ON p.id = t.project_id
+      WHERE p.owner_id = $1 OR t.assignee_id = $1
     `;
     const { rows } = await db.query(text, [userId]);
-    return rows;
+    return parseInt(rows[0].count);
   }
 
   static async findById(projectId) {

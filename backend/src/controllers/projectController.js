@@ -3,8 +3,22 @@ const TaskModel = require('../models/taskModel');
 
 const getProjects = async (req, res, next) => {
   try {
-    const projects = await ProjectModel.findAllForUser(req.user.user_id);
-    res.json({ projects });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const projects = await ProjectModel.findAllForUser(req.user.user_id, limit, offset);
+    const totalCount = await ProjectModel.countAllForUser(req.user.user_id);
+
+    res.json({ 
+      projects,
+      pagination: {
+        totalCount,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit)
+      }
+    });
   } catch (err) { next(err); }
 };
 

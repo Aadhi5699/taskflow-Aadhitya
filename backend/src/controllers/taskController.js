@@ -4,8 +4,23 @@ const ProjectModel = require('../models/projectModel');
 const getTasks = async (req, res, next) => {
   try {
     const { status, assignee } = req.query;
-    const tasks = await TaskModel.findByProjectId(req.params.id, { status, assignee });
-    res.json({ tasks });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = (page - 1) * limit;
+
+    const filters = { status, assignee };
+    const tasks = await TaskModel.findByProjectId(req.params.id, filters, limit, offset);
+    const totalCount = await TaskModel.countByProjectId(req.params.id, filters);
+
+    res.json({ 
+      tasks,
+      pagination: {
+        totalCount,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit)
+      }
+    });
   } catch (err) { next(err); }
 };
 

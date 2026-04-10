@@ -31,15 +31,22 @@ app.get('/users', authMiddleware, async (req, res, next) => {
 // Generic error handler must be last
 app.use(errorHandler);
 
-const server = app.listen(port, () => {
-  console.log(`🚀 API Server running on port ${port}`);
+const PORT = process.env.PORT || 4000;
+
+// Structured Logging Helper
+const logger = (msg, meta = {}) => {
+  console.log(JSON.stringify({ timestamp: new Date().toISOString(), message: msg, ...meta }));
+};
+
+const server = app.listen(PORT, () => {
+  logger('🚀 API Server running', { port: PORT, env: process.env.NODE_ENV });
 });
 
-// Graceful shutdown handling
+// Graceful Shutdown Support
 const shutdown = () => {
-  console.log('SIGTERM signal received: closing HTTP server');
+  logger('⚠️ SIGTERM received. Shutting down gracefully...');
   server.close(() => {
-    console.log('HTTP server closed');
+    logger('🛑 Process terminated');
     process.exit(0);
   });
 };
