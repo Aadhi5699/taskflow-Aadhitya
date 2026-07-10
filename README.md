@@ -16,11 +16,6 @@ TaskFlow tool built to manage professional projects and team assignments.
 - **Graceful Shutdown**: The Node.js process listens for `SIGTERM` signals to ensure it drains active connections before shutting down, preventing data loss.
 - **Structured Logging**: Implemented JSON-based logging to support professional observability and easier debugging in containerized environments.
 
-### Intentional Omissions
-To ensure a complete and stable MVP within the 5 hour timeframe, the following optional features were intentionally omitted:
-- **Frontend**: Drag-and-drop, Dark mode, and Real-time updates (WebSockets) were left out to focus on core CRUD reliability and state persistence.
-- **Backend**: The statistics endpoint and integration tests were omitted. Instead, the focus was placed on strict schema validation, secure password hashing (Bcrypt cost 12), and robust Docker orchestration.
-
 ## 3. Running Locally
 Assume you have **Docker** installed. Follow these exact steps:
 
@@ -70,8 +65,3 @@ All non-auth endpoints require `Authorization: Bearer <token>`
 - **projects** — stores projects created by users
 - **tasks** — stores tasks under projects
 - **schema_migrations** — tracks database migrations
-
-## 7. What You'd Do With More Time
-- I would have added unit testing for the backend and frontend.
-- UI Enhancements and cosmetics changes
-- I used localStorage for simplicity. In a high-security production environment, I would transition to HTTP-only Cookies.
