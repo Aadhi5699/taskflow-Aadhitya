@@ -27,6 +27,7 @@ services:
       - ./backend/db:/db
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-taskflow}?sslmode=disable
+      DBMATE_NO_DUMP: "true"
     command: up
 
   backend:
