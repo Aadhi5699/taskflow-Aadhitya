@@ -2,7 +2,7 @@
 
 ## 1. Overview
 TaskFlow tool built to manage professional projects and team assignments. 
-- **Frontend**: React, TypeScript, Tailwind CSS v4.
+- **Frontend**: React, TypeScript, Tailwind CSS.
 - **Backend**: Node.js, Express, PostgreSQL.
 - **Infrastructure**: Docker & Dbmate migrations.
 
