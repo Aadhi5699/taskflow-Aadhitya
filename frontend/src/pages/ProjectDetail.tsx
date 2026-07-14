@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, ChevronLeft, Trash2, Filter, Edit2 } from 'lucide-react';
+import { Plus, ChevronLeft, Trash2, Filter, Edit2, Sparkles } from 'lucide-react';
 import api from '../api/client';
 import type { Project, Task, TaskStatus, User } from '../types';
 import { Button } from '../components/ui/Button';
@@ -32,27 +32,25 @@ export default function ProjectDetail() {
 
   const [filterAssignee, setFilterAssignee] = useState<string>('all');
 
-  const [isPredicting, setIsPredicting] = useState(false);
-  const [predictionResult, setPredictionResult] = useState<{
+  const [loadingPredictions, setLoadingPredictions] = useState<Record<string, boolean>>({});
+  const [predictions, setPredictions] = useState<Record<string, {
     isStuck: boolean;
     confidenceScore: number;
     blockerReason: string;
-  } | null>(null);
-  const [predictionError, setPredictionError] = useState<string | null>(null);
+  }>>({});
+  const [errorPredictions, setErrorPredictions] = useState<Record<string, string>>({});
 
-  const handlePredictBlocker = async () => {
-    if (!editingTask) return;
-    setIsPredicting(true);
-    setPredictionError(null);
-    setPredictionResult(null);
+  const handlePredictBlocker = async (taskId: string) => {
+    setLoadingPredictions(prev => ({ ...prev, [taskId]: true }));
+    setErrorPredictions(prev => ({ ...prev, [taskId]: '' }));
     try {
-      const res = await api.post(`/tasks/${editingTask.id}/predict-stuck`);
-      setPredictionResult(res.data);
+      const res = await api.post(`/tasks/${taskId}/predict-stuck`);
+      setPredictions(prev => ({ ...prev, [taskId]: res.data }));
     } catch (err: any) {
       const msg = err.response?.data?.error || err.message || 'Failed to analyze task';
-      setPredictionError(msg);
+      setErrorPredictions(prev => ({ ...prev, [taskId]: msg }));
     } finally {
-      setIsPredicting(false);
+      setLoadingPredictions(prev => ({ ...prev, [taskId]: false }));
     }
   };
 
@@ -83,8 +81,6 @@ export default function ProjectDetail() {
     setNewTaskAssignee('unassigned');
     setNewTaskStatus('todo');
     setNewTaskPriority('medium');
-    setPredictionResult(null);
-    setPredictionError(null);
   };
 
   const handleOpenProjectEdit = () => {
@@ -313,24 +309,38 @@ export default function ProjectDetail() {
                            <h4 className="font-semibold text-sm leading-tight text-foreground inline-block align-middle mr-2">
                              {task.title}
                            </h4>
-                           {(isOwner || task.assignee_id === user?.id) && (
-                             <>
-                               <button
-                                 title="Edit Task" 
-                                 onClick={() => handleEditClick(task)}
-                                 className="text-muted-foreground/50 hover:text-primary transition-colors inline-block align-middle hidden group-hover:inline-block mr-1"
-                               >
-                                  <Edit2 size={13} />
-                               </button>
-                               <button
-                                 title="Delete Task" 
-                                 onClick={() => { if(window.confirm('Are you certain you want to delete this task?')) deleteTaskMutation.mutate(task.id); }}
-                                 className="text-muted-foreground/50 hover:text-destructive transition-colors inline-block align-middle hidden group-hover:inline-block"
-                               >
-                                  <Trash2 size={13} />
-                               </button>
-                             </>
-                           )}
+                            <div className="inline-flex items-center gap-1">
+                              <button
+                                title="Predict Blocker" 
+                                onClick={(e) => { e.stopPropagation(); handlePredictBlocker(task.id); }}
+                                disabled={loadingPredictions[task.id]}
+                                className="text-purple-500 hover:text-purple-700 transition-colors cursor-pointer mr-1 inline-flex items-center align-middle"
+                              >
+                                {loadingPredictions[task.id] ? (
+                                  <span className="animate-spin text-xs">⏳</span>
+                                ) : (
+                                  <Sparkles size={13} />
+                                )}
+                              </button>
+                             {(isOwner || task.assignee_id === user?.id) && (
+                               <>
+                                 <button
+                                   title="Edit Task" 
+                                   onClick={() => handleEditClick(task)}
+                                   className="text-muted-foreground/50 hover:text-primary transition-colors inline-block align-middle hidden group-hover:inline-block"
+                                 >
+                                    <Edit2 size={13} />
+                                 </button>
+                                 <button
+                                   title="Delete Task" 
+                                   onClick={() => { if(window.confirm('Are you certain you want to delete this task?')) deleteTaskMutation.mutate(task.id); }}
+                                   className="text-muted-foreground/50 hover:text-destructive transition-colors inline-block align-middle hidden group-hover:inline-block"
+                                 >
+                                    <Trash2 size={13} />
+                                 </button>
+                               </>
+                             )}
+                           </div>
                         </div>
                         <span className={cn("text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-sm shrink-0", 
                            task.priority === 'high' ? 'bg-destructive/10 text-destructive' : 
@@ -356,6 +366,40 @@ export default function ProjectDetail() {
                            </span>
                          )}
                       </div>
+
+                      {/* Inline AI Prediction Result */}
+                      {predictions[task.id] && (
+                        <div className={cn(
+                          "relative overflow-hidden rounded-md border p-2 mt-3 text-[11px] backdrop-blur-sm transition-all duration-300",
+                          predictions[task.id].isStuck
+                            ? "border-destructive/30 bg-destructive/10 text-destructive shadow-[0_0_8px_rgba(239,68,68,0.1)]"
+                            : "border-green-500/30 bg-green-500/10 text-green-600 shadow-[0_0_8px_rgba(34,197,94,0.1)]"
+                        )}>
+                          <div className={cn(
+                            "absolute top-0 left-0 h-full w-1",
+                            predictions[task.id].isStuck ? "bg-destructive animate-pulse" : "bg-green-500"
+                          )} />
+                          <div className="pl-1.5 text-foreground">
+                            <p className="font-bold flex justify-between items-center text-xs">
+                              <span className={predictions[task.id].isStuck ? "text-destructive" : "text-green-600"}>
+                                {predictions[task.id].isStuck ? "⚠️ Blocker Warning" : "✅ Progress Okay"}
+                              </span>
+                              <span className="text-[10px] opacity-80">
+                                {predictions[task.id].confidenceScore}%
+                              </span>
+                            </p>
+                            <p className="text-foreground/90 mt-1 leading-normal">
+                              {predictions[task.id].blockerReason}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {errorPredictions[task.id] && (
+                        <div className="rounded border border-destructive/20 bg-destructive/5 text-destructive p-2 text-[10px] mt-3">
+                          Error: {errorPredictions[task.id]}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex gap-2 pt-3 mt-1 border-t border-border/50">
@@ -439,38 +483,38 @@ export default function ProjectDetail() {
           </div>
 
           {/* Prediction Result Alert Card */}
-          {predictionResult && (
+          {editingTask && predictions[editingTask.id] && (
             <div className={cn(
               "relative overflow-hidden rounded-xl border p-4 backdrop-blur-md shadow-md mt-4 transition-all duration-300",
-              predictionResult.isStuck 
+              predictions[editingTask.id].isStuck 
                 ? "border-destructive/30 bg-destructive/10 text-destructive shadow-[0_0_15px_rgba(239,68,68,0.15)]" 
                 : "border-green-500/30 bg-green-500/10 text-green-600 shadow-[0_0_15px_rgba(34,197,94,0.15)]"
             )}>
               <div className={cn(
                 "absolute top-0 left-0 h-full w-1.5",
-                predictionResult.isStuck ? "bg-destructive animate-pulse" : "bg-green-500"
+                predictions[editingTask.id].isStuck ? "bg-destructive animate-pulse" : "bg-green-500"
               )} />
               <div className="flex items-start gap-3 pl-2 text-foreground">
                 <span className="text-lg">
-                  {predictionResult.isStuck ? "⚠️" : "✅"}
+                  {predictions[editingTask.id].isStuck ? "⚠️" : "✅"}
                 </span>
                 <div className="flex-1">
                   <h4 className="font-bold text-sm">
-                    {predictionResult.isStuck 
-                      ? `AI Blocker Detected (${predictionResult.confidenceScore}% Confidence)` 
-                      : `AI Progress Outlook (${predictionResult.confidenceScore}% Confidence)`}
+                    {predictions[editingTask.id].isStuck 
+                      ? `AI Blocker Detected (${predictions[editingTask.id].confidenceScore}% Confidence)` 
+                      : `AI Progress Outlook (${predictions[editingTask.id].confidenceScore}% Confidence)`}
                   </h4>
                   <p className="text-sm text-foreground/90 mt-1 leading-relaxed">
-                    {predictionResult.blockerReason}
+                    {predictions[editingTask.id].blockerReason}
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {predictionError && (
+          {editingTask && errorPredictions[editingTask.id] && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/20 text-destructive p-3 text-sm mt-4">
-              Error analyzing task: {predictionError}
+              Error analyzing task: {errorPredictions[editingTask.id]}
             </div>
           )}
 
@@ -479,8 +523,8 @@ export default function ProjectDetail() {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={handlePredictBlocker}
-                isLoading={isPredicting}
+                onClick={() => handlePredictBlocker(editingTask.id)}
+                isLoading={loadingPredictions[editingTask.id]}
                 className="mr-auto gap-1 bg-purple-600/10 text-purple-600 hover:bg-purple-600 hover:text-white border border-purple-600/20"
               >
                 ✨ Predict Blocker
