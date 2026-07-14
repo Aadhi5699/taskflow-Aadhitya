@@ -98,6 +98,14 @@ class TaskModel {
   static async delete(taskId) {
     await db.query('DELETE FROM tasks WHERE id = $1', [taskId]);
   }
+
+  static async countActiveForUser(userId) {
+    const { rows } = await db.query(
+      "SELECT COUNT(*) FROM tasks WHERE assignee_id = $1 AND status IN ('todo', 'in_progress')",
+      [userId]
+    );
+    return parseInt(rows[0].count);
+  }
 }
 
 module.exports = TaskModel;

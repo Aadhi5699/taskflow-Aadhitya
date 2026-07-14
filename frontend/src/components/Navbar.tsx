@@ -18,7 +18,7 @@ export default function Navbar() {
             </span>
             <button 
               onClick={logout}
-              className="px-4 py-2 text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md transition-colors"
+              className="cursor-pointer px-4 py-2 text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md transition-colors"
             >
               Sign Out
             </button>

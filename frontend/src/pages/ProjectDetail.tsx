@@ -32,6 +32,30 @@ export default function ProjectDetail() {
 
   const [filterAssignee, setFilterAssignee] = useState<string>('all');
 
+  const [isPredicting, setIsPredicting] = useState(false);
+  const [predictionResult, setPredictionResult] = useState<{
+    isStuck: boolean;
+    confidenceScore: number;
+    blockerReason: string;
+  } | null>(null);
+  const [predictionError, setPredictionError] = useState<string | null>(null);
+
+  const handlePredictBlocker = async () => {
+    if (!editingTask) return;
+    setIsPredicting(true);
+    setPredictionError(null);
+    setPredictionResult(null);
+    try {
+      const res = await api.post(`/tasks/${editingTask.id}/predict-stuck`);
+      setPredictionResult(res.data);
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.message || 'Failed to analyze task';
+      setPredictionError(msg);
+    } finally {
+      setIsPredicting(false);
+    }
+  };
+
   type ProjectResponse = Project & { tasks: Task[] };
 
   const { data, isLoading, isError } = useQuery<ProjectResponse>({
@@ -59,6 +83,8 @@ export default function ProjectDetail() {
     setNewTaskAssignee('unassigned');
     setNewTaskStatus('todo');
     setNewTaskPriority('medium');
+    setPredictionResult(null);
+    setPredictionError(null);
   };
 
   const handleOpenProjectEdit = () => {
@@ -412,7 +438,54 @@ export default function ProjectDetail() {
             />
           </div>
 
+          {/* Prediction Result Alert Card */}
+          {predictionResult && (
+            <div className={cn(
+              "relative overflow-hidden rounded-xl border p-4 backdrop-blur-md shadow-md mt-4 transition-all duration-300",
+              predictionResult.isStuck 
+                ? "border-destructive/30 bg-destructive/10 text-destructive shadow-[0_0_15px_rgba(239,68,68,0.15)]" 
+                : "border-green-500/30 bg-green-500/10 text-green-600 shadow-[0_0_15px_rgba(34,197,94,0.15)]"
+            )}>
+              <div className={cn(
+                "absolute top-0 left-0 h-full w-1.5",
+                predictionResult.isStuck ? "bg-destructive animate-pulse" : "bg-green-500"
+              )} />
+              <div className="flex items-start gap-3 pl-2 text-foreground">
+                <span className="text-lg">
+                  {predictionResult.isStuck ? "⚠️" : "✅"}
+                </span>
+                <div className="flex-1">
+                  <h4 className="font-bold text-sm">
+                    {predictionResult.isStuck 
+                      ? `AI Blocker Detected (${predictionResult.confidenceScore}% Confidence)` 
+                      : `AI Progress Outlook (${predictionResult.confidenceScore}% Confidence)`}
+                  </h4>
+                  <p className="text-sm text-foreground/90 mt-1 leading-relaxed">
+                    {predictionResult.blockerReason}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {predictionError && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 text-destructive p-3 text-sm mt-4">
+              Error analyzing task: {predictionError}
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-border">
+            {editingTask && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handlePredictBlocker}
+                isLoading={isPredicting}
+                className="mr-auto gap-1 bg-purple-600/10 text-purple-600 hover:bg-purple-600 hover:text-white border border-purple-600/20"
+              >
+                ✨ Predict Blocker
+              </Button>
+            )}
             <Button type="button" variant="ghost" onClick={closeTaskModal}>Cancel</Button>
             <Button type="submit" isLoading={createTaskMutation.isPending || editTaskMutation.isPending}>
               {editingTask ? "Save Details" : "Add Task"}
