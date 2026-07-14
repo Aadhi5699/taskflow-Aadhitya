@@ -482,54 +482,7 @@ export default function ProjectDetail() {
             />
           </div>
 
-          {/* Prediction Result Alert Card */}
-          {editingTask && predictions[editingTask.id] && (
-            <div className={cn(
-              "relative overflow-hidden rounded-xl border p-4 backdrop-blur-md shadow-md mt-4 transition-all duration-300",
-              predictions[editingTask.id].isStuck 
-                ? "border-destructive/30 bg-destructive/10 text-destructive shadow-[0_0_15px_rgba(239,68,68,0.15)]" 
-                : "border-green-500/30 bg-green-500/10 text-green-600 shadow-[0_0_15px_rgba(34,197,94,0.15)]"
-            )}>
-              <div className={cn(
-                "absolute top-0 left-0 h-full w-1.5",
-                predictions[editingTask.id].isStuck ? "bg-destructive animate-pulse" : "bg-green-500"
-              )} />
-              <div className="flex items-start gap-3 pl-2 text-foreground">
-                <span className="text-lg">
-                  {predictions[editingTask.id].isStuck ? "⚠️" : "✅"}
-                </span>
-                <div className="flex-1">
-                  <h4 className="font-bold text-sm">
-                    {predictions[editingTask.id].isStuck 
-                      ? `AI Blocker Detected (${predictions[editingTask.id].confidenceScore}% Confidence)` 
-                      : `AI Progress Outlook (${predictions[editingTask.id].confidenceScore}% Confidence)`}
-                  </h4>
-                  <p className="text-sm text-foreground/90 mt-1 leading-relaxed">
-                    {predictions[editingTask.id].blockerReason}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {editingTask && errorPredictions[editingTask.id] && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/20 text-destructive p-3 text-sm mt-4">
-              Error analyzing task: {errorPredictions[editingTask.id]}
-            </div>
-          )}
-
           <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-border">
-            {editingTask && (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => handlePredictBlocker(editingTask.id)}
-                isLoading={loadingPredictions[editingTask.id]}
-                className="mr-auto gap-1 bg-purple-600/10 text-purple-600 hover:bg-purple-600 hover:text-white border border-purple-600/20"
-              >
-                ✨ Predict Blocker
-              </Button>
-            )}
             <Button type="button" variant="ghost" onClick={closeTaskModal}>Cancel</Button>
             <Button type="submit" isLoading={createTaskMutation.isPending || editTaskMutation.isPending}>
               {editingTask ? "Save Details" : "Add Task"}
